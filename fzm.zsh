@@ -1,3 +1,6 @@
+# Define a regular expression for matching URLs
+__url_regex='^(http|https):\/\/[a-zA-Z0-9\-\.]+(\.[a-zA-Z]{2,})?(:[0-9]{1,5})?(\/.*)?$'
+
 function __fzm_select_bookmarks()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
@@ -10,6 +13,17 @@ function __fzm_select_with_query()
     setopt localoptions pipefail no_aliases 2> /dev/null
     local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS"
     __fzm_decorate | FZF_DEFAULT_OPTS="${opts}" fzf -q "$@" -1 -0 | awk '{ print $1 }'
+}
+
+function __fzm_filter_urls()
+{
+
+    while read line
+    do
+        if  [[ $line =~ $__url_regex ]]; then
+            echo $line
+        fi
+    done
 }
 
 function __fzm_filter_files()
@@ -41,6 +55,8 @@ function __fzm_decorate()
                 echo "$line" "[d]"
             elif [ -f "$line" ]; then
                 echo "$line" "[f]"
+            elif  [[ $line =~ $__url_regex ]]; then
+                echo "$line" "[u]"
             fi
         fi
     done | column -t
@@ -99,30 +115,31 @@ usage="$(basename "$0") [-h] <command> [opts] -- fuzzy marks
 
 commands:
 
-list [--files] [--dirs]                 list bookmarks
-add <path> [paths...]                   bookmark items
-select [--files] [--dirs] [--multi]     select bookmark(s) and print selection to sdtout
-query <pattern>                         Query bookmark matching <pattern> and print match to stdout. Selection menu will open if match is ambiguous.
-edit                                    edit bookmarks file
-fix                                     remove bookmarked that no longer exist
-clear                                   clear all bookmarks
+list [--files] [--dirs] [--urls]               list bookmarks
+add <path> [paths...]                          bookmark items
+select [--files] [--dirs] [--urls] [--multi]   select bookmark(s) and print selection to sdtout
+query <pattern>                                Query bookmark matching <pattern> and print match to stdout. Selection menu will open if match is ambiguous.
+edit                                           edit bookmarks file
+fix                                            remove bookmarked that no longer exist
+clear                                          clear all bookmarks
 
 options:
 
--h,--help                               show help
---files                                 restrict to files only
---dirs                                  restrict to dirs only
---multi                                 allow multiple selection of items
+-h,--help                                      show help
+--files                                        restrict to files only
+--dirs                                         restrict to dirs only
+--urls                                         restrict to urls only
+--multi                                        allow multiple selection of items
 
 keybindings:
 
-Ctrl+P                                  Select a bookmarked directory and jump to it
-Ctrl+O                                  Select one or multiple bookmarks and insert them into the current command line
+Ctrl+P                                         Select a bookmarked directory and jump to it
+Ctrl+O                                         Select one or multiple bookmarks and insert them into the current command line
 
 ENV configuration:
 
-FZM_NO_BINDINGS                         Disabled creation of bindings
-FZM_BOOKMARKS_FILE                      Bookmarks file. Defaults to '~/.fzm.txt'
+FZM_NO_BINDINGS                                Disabled creation of bindings
+FZM_BOOKMARKS_FILE                             Bookmarks file. Defaults to '~/.fzm.txt'
 "
 
 function set_bookmarks_file()
@@ -146,22 +163,26 @@ function fzm()
     bookmarks_file=$(set_bookmarks_file)
     case "$1" in
         'list')
-            __fzm_check_regex "$1" '(--files|--dirs)' "${@:2}" || return 1
+            __fzm_check_regex "$1" '(--files|--dirs|--urls)' "${@:2}" || return 1
             if [[ $* == *--files* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_files | __fzm_decorate
             elif [[ $* == *--dirs* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_decorate
+            elif [[ $* == *--urls* ]]; then
+                cat "$bookmarks_file" | __fzm_filter_urls | __fzm_decorate
             else
                 cat "$bookmarks_file" | __fzm_decorate
             fi
             ;;
         'select')
-            __fzm_check_regex "$1" '(--multi|--files|--dirs)' "${@:2}" || return 1
+            __fzm_check_regex "$1" '(--multi|--files|--dirs|--urls)' "${@:2}" || return 1
             [[ $* == *--multi* ]] && local multi="-m"
             if [[ $* == *--files* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_bookmarks "${multi}"
             elif [[ $* == *--dirs* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_bookmarks "${multi}"
+            elif [[ $* == *--urls* ]]; then
+                cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_bookmarks "${multi}"
             else
                 cat "$bookmarks_file" | __fzm_select_bookmarks "${multi}"
             fi
@@ -175,6 +196,8 @@ function fzm()
                 cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_with_query "${@:3}"
             elif [[ "$2" == "--dirs" ]]; then
                 cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_with_query "${@:3}"
+            elif [[ "$2" == "--urls" ]]; then
+                cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_with_query "${@:3}"
             else
                 cat "$bookmarks_file" | __fzm_select_with_query "$2"
             fi
@@ -221,7 +244,8 @@ function fzm-insert-bookmark()
 }
 zle     -N    fzm-insert-bookmark
 if [[ -z $FZM_NO_BINDINGS ]]; then
-    bindkey '^O' fzm-insert-bookmark
+    bindkey '^[m' fzm-insert-bookmark
+    bindkey -M vicmd '^[m' fzm-insert-bookmark
 fi
 
 #######################################################################
@@ -240,7 +264,8 @@ return $ret
 }
 zle     -N    fzm-cd-to-bookmark
 if [[ -z $FZM_NO_BINDINGS ]]; then
-    bindkey '^P' fzm-cd-to-bookmark
+    bindkey '^[.' fzm-cd-to-bookmark
+    bindkey -M vicmd '^[.' fzm-cd-to-bookmark
 fi
 
 #######################################################################
