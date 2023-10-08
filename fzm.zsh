@@ -1,18 +1,18 @@
-function __zfm_select_bookmarks()
+function __fzm_select_bookmarks()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
     local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS"
-    __zfm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
+    __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
 }
 
-function __zfm_select_with_query()
+function __fzm_select_with_query()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
     local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS"
-    __zfm_decorate | FZF_DEFAULT_OPTS="${opts}" fzf -q "$@" -1 -0 | awk '{ print $1 }'
+    __fzm_decorate | FZF_DEFAULT_OPTS="${opts}" fzf -q "$@" -1 -0 | awk '{ print $1 }'
 }
 
-function __zfm_filter_files()
+function __fzm_filter_files()
 {
     while read line
     do
@@ -22,7 +22,7 @@ function __zfm_filter_files()
     done
 }
 
-function __zfm_filter_dirs()
+function __fzm_filter_dirs()
 {
     while read line
     do
@@ -32,7 +32,7 @@ function __zfm_filter_dirs()
     done
 }
 
-function __zfm_decorate()
+function __fzm_decorate()
 {
     while read line
     do
@@ -46,7 +46,7 @@ function __zfm_decorate()
     done | column -t
 }
 
-function __zfm_filter_non_existent()
+function __fzm_filter_non_existent()
 {
     while read line
     do
@@ -56,7 +56,7 @@ function __zfm_filter_non_existent()
     done
 }
 
-function __zfm_check_regex()
+function __fzm_check_regex()
 {
     local command="$1"
     local regex="$2"
@@ -70,7 +70,7 @@ function __zfm_check_regex()
     done
 }
 
-function __zfm_add_items_to_file()
+function __fzm_add_items_to_file()
 {
     for var in "${@:2}"
     do
@@ -86,11 +86,11 @@ function __zfm_add_items_to_file()
     echo "$contents" | awk '!a[$0]++' > "$1"
 }
 
-function __zfm_cleanup()
+function __fzm_cleanup()
 {
     local old_length=$(wc -l "$1" | cut -d\  -f 1)
     local contents=$(cat "$1")
-    echo "$contents" | awk '!a[$0]++' | __zfm_filter_non_existent > $1
+    echo "$contents" | awk '!a[$0]++' | __fzm_filter_non_existent > $1
     local new_length=$(wc -l "$1" | cut -d\  -f 1)
     echo "removed" $(( $old_length - $new_length)) "entries"
 }
@@ -121,67 +121,67 @@ Ctrl+O                                  Select one or multiple bookmarks and ins
 
 ENV configuration:
 
-ZFM_NO_BINDINGS                         Disabled creation of bindings
-ZFM_BOOKMARKS_FILE                      Bookmarks file. Defaults to '~/.zfm.txt'
+FZM_NO_BINDINGS                         Disabled creation of bindings
+FZM_BOOKMARKS_FILE                      Bookmarks file. Defaults to '~/.fzm.txt'
 "
 
 function set_bookmarks_file()
 {
-    [[ -n "${ZFM_BOOKMARKS_FILE+x}" ]] && local bookmarks_file="$ZFM_BOOKMARKS_FILE" || local bookmarks_file="${HOME}/.zfm.txt"
+    [[ -n "${FZM_BOOKMARKS_FILE+x}" ]] && local bookmarks_file="$FZM_BOOKMARKS_FILE" || local bookmarks_file="${HOME}/.fzm.txt"
 
     if [ ! -e "$bookmarks_file" ]; then
         touch "$bookmarks_file" &> /dev/null
     fi
 
     if [ ! -f "$bookmarks_file" ]; then
-        printf "ZFM failed to create a bookmarks file.\n\n ZFM_BOOKMARKS_FILE is currently set to '${ZFM_BOOKMARKS_FILE}' if the ZFM_BOOKMARKS_FILE is variable has been set it has likely not been done correctly, the path does not exists, the variable is not exported, or the zfm cannot access the set directory. See zfm --help for more information.\n"
+        printf "FZM failed to create a bookmarks file.\n\n FZM_BOOKMARKS_FILE is currently set to '${FZM_BOOKMARKS_FILE}' if the FZM_BOOKMARKS_FILE is variable has been set it has likely not been done correctly, the path does not exists, the variable is not exported, or the fzm cannot access the set directory. See fzm --help for more information.\n"
         return 1
     fi
 
     echo $bookmarks_file
 }
 
-function zfm()
+function fzm()
 {
     bookmarks_file=$(set_bookmarks_file)
     case "$1" in
         'list')
-            __zfm_check_regex "$1" '(--files|--dirs)' "${@:2}" || return 1
+            __fzm_check_regex "$1" '(--files|--dirs)' "${@:2}" || return 1
             if [[ $* == *--files* ]]; then
-                cat "$bookmarks_file" | __zfm_filter_files | __zfm_decorate
+                cat "$bookmarks_file" | __fzm_filter_files | __fzm_decorate
             elif [[ $* == *--dirs* ]]; then
-                cat "$bookmarks_file" | __zfm_filter_dirs | __zfm_decorate
+                cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_decorate
             else
-                cat "$bookmarks_file" | __zfm_decorate
+                cat "$bookmarks_file" | __fzm_decorate
             fi
             ;;
         'select')
-            __zfm_check_regex "$1" '(--multi|--files|--dirs)' "${@:2}" || return 1
+            __fzm_check_regex "$1" '(--multi|--files|--dirs)' "${@:2}" || return 1
             [[ $* == *--multi* ]] && local multi="-m"
             if [[ $* == *--files* ]]; then
-                cat "$bookmarks_file" | __zfm_filter_files | __zfm_select_bookmarks "${multi}"
+                cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_bookmarks "${multi}"
             elif [[ $* == *--dirs* ]]; then
-                cat "$bookmarks_file" | __zfm_filter_dirs | __zfm_select_bookmarks "${multi}"
+                cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_bookmarks "${multi}"
             else
-                cat "$bookmarks_file" | __zfm_select_bookmarks "${multi}"
+                cat "$bookmarks_file" | __fzm_select_bookmarks "${multi}"
             fi
             ;;
         'add')
             echo "Added to: $bookmarks_file"
-            __zfm_add_items_to_file "$bookmarks_file" "${@:2}" || return 1
+            __fzm_add_items_to_file "$bookmarks_file" "${@:2}" || return 1
             ;;
         'query')
             if [[ "$2" == "--files" ]]; then
-                cat "$bookmarks_file" | __zfm_filter_files | __zfm_select_with_query "${@:3}"
+                cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_with_query "${@:3}"
             elif [[ "$2" == "--dirs" ]]; then
-                cat "$bookmarks_file" | __zfm_filter_dirs | __zfm_select_with_query "${@:3}"
+                cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_with_query "${@:3}"
             else
-                cat "$bookmarks_file" | __zfm_select_with_query "$2"
+                cat "$bookmarks_file" | __fzm_select_with_query "$2"
             fi
             ;;
         'fix')
             ! [[  -z "${@:2}" ]] && echo "Invalid option '${@:2}' for '$1'" && return 1
-            __zfm_cleanup "$bookmarks_file"
+            __fzm_cleanup "$bookmarks_file"
             ;;
         'clear')
             ! [[  -z "${@:2}" ]] && echo "Invalid option '${@:2}' for '$1'" && return 1
@@ -204,7 +204,7 @@ function zfm()
 
 #######################################################################
 # CTRL-B - insert bookmark
-function __zfm_append_to_prompt()
+function __fzm_append_to_prompt()
 {
     if [[ -z "$1" ]]; then
         zle reset-prompt
@@ -215,19 +215,19 @@ function __zfm_append_to_prompt()
     zle reset-prompt
     return $ret
 }
-function zfm-insert-bookmark()
+function fzm-insert-bookmark()
 {
-    __zfm_append_to_prompt "$(zfm select --multi)"
+    __fzm_append_to_prompt "$(fzm select --multi)"
 }
-zle     -N    zfm-insert-bookmark
-if [[ -z $ZFM_NO_BINDINGS ]]; then
-    bindkey '^O' zfm-insert-bookmark
+zle     -N    fzm-insert-bookmark
+if [[ -z $FZM_NO_BINDINGS ]]; then
+    bindkey '^O' fzm-insert-bookmark
 fi
 
 #######################################################################
 # CTRL-P - cd into bookmarked directory
-function zfm-cd-to-bookmark() {
-local dir=$(zfm select --dirs)
+function fzm-cd-to-bookmark() {
+local dir=$(fzm select --dirs)
 if [[ -z "$dir" ]]; then
     zle redisplay
     return 0
@@ -238,9 +238,9 @@ BUFFER="cd $dir"
 zle accept-line
 return $ret
 }
-zle     -N    zfm-cd-to-bookmark
-if [[ -z $ZFM_NO_BINDINGS ]]; then
-    bindkey '^P' zfm-cd-to-bookmark
+zle     -N    fzm-cd-to-bookmark
+if [[ -z $FZM_NO_BINDINGS ]]; then
+    bindkey '^P' fzm-cd-to-bookmark
 fi
 
 #######################################################################
@@ -248,9 +248,9 @@ fi
 function f()
 {
     if [ -z "$@" ]; then
-        local dir=$(zfm select --dirs)
+        local dir=$(fzm select --dirs)
     else
-        local dir=$(zfm query --dirs "$@")
+        local dir=$(fzm query --dirs "$@")
     fi
     if [[ -z "$dir" ]]; then
         return 0

@@ -40,11 +40,11 @@ def environment(tmp_path):
 
 def invoke(command, bookmarks_file):
     repo_root = git.Repo('.', search_parent_directories=True).working_tree_dir
-    r = subprocess.run(['/bin/zsh', 'zfm.zsh'] + command,
+    r = subprocess.run(['/bin/zsh', 'fzm.zsh'] + command,
                        cwd=repo_root,
                        capture_output=True,
                        text=True,
-                       env={'ZFM_BOOKMARKS_FILE': bookmarks_file})
+                       env={'FZM_BOOKMARKS_FILE': bookmarks_file})
     r.check_returncode
     return r.stdout
 
@@ -71,22 +71,22 @@ class Bookmark:
         return self.path == other.path and self.type == other.type
 
 
-def create_bookmarks(zfm_list_output):
-    return [Bookmark.fromLine(line) for line in zfm_list_output.splitlines()]
+def create_bookmarks(fzm_list_output):
+    return [Bookmark.fromLine(line) for line in fzm_list_output.splitlines()]
 
 
 def list_bookmarks(bookmarks_file):
-    output = invoke(['zfm', 'list'], bookmarks_file)
+    output = invoke(['fzm', 'list'], bookmarks_file)
     return create_bookmarks(output)
 
 
 def list_file_bookmarks(bookmarks_file):
-    output = invoke(['zfm', 'list', '--files'], bookmarks_file)
+    output = invoke(['fzm', 'list', '--files'], bookmarks_file)
     return create_bookmarks(output)
 
 
 def list_directory_bookmarks(bookmarks_file):
-    output = invoke(['zfm', 'list', '--dirs'], bookmarks_file)
+    output = invoke(['fzm', 'list', '--dirs'], bookmarks_file)
     return create_bookmarks(output)
 
 
@@ -97,7 +97,7 @@ def test_initial_empty_bookmarks(environment):
 
 
 def test_bookmark_directory(environment):
-    invoke(['zfm', 'add', environment.dir_a], environment.bookmarks_file)
+    invoke(['fzm', 'add', environment.dir_a], environment.bookmarks_file)
     assert list_bookmarks(environment.bookmarks_file) == [
         Bookmark(environment.dir_a, BookmarkType.Dir)]
     assert list_directory_bookmarks(environment.bookmarks_file) == [
@@ -106,7 +106,7 @@ def test_bookmark_directory(environment):
 
 
 def test_bookmark_file(environment):
-    invoke(['zfm', 'add', environment.file_a], environment.bookmarks_file)
+    invoke(['fzm', 'add', environment.file_a], environment.bookmarks_file)
     assert list_bookmarks(environment.bookmarks_file) == [
         Bookmark(environment.file_a, BookmarkType.File)]
     assert list_file_bookmarks(environment.bookmarks_file) == [
@@ -115,9 +115,9 @@ def test_bookmark_file(environment):
 
 
 def test_bookmark_multiple(environment):
-    invoke(['zfm', 'add', environment.dir_a, environment.file_a],
+    invoke(['fzm', 'add', environment.dir_a, environment.file_a],
            environment.bookmarks_file)
-    invoke(['zfm', 'add', environment.dir_b], environment.bookmarks_file)
+    invoke(['fzm', 'add', environment.dir_b], environment.bookmarks_file)
     assert list_bookmarks(environment.bookmarks_file) == [
         Bookmark(environment.dir_a, BookmarkType.Dir),
         Bookmark(environment.file_a, BookmarkType.File),
@@ -130,35 +130,35 @@ def test_bookmark_multiple(environment):
 
 
 def test_query(environment):
-    invoke(['zfm', 'add', environment.dir_a, environment.dir_b],
+    invoke(['fzm', 'add', environment.dir_a, environment.dir_b],
            environment.bookmarks_file)
-    invoke(['zfm', 'add', environment.file_a], environment.bookmarks_file)
-    output = invoke(['zfm', 'query', 'dir_a'], environment.bookmarks_file)
+    invoke(['fzm', 'add', environment.file_a], environment.bookmarks_file)
+    output = invoke(['fzm', 'query', 'dir_a'], environment.bookmarks_file)
     assert Path(output.strip()) == environment.dir_a
-    output = invoke(['zfm', 'query', '--dirs', 'dir_a'],
+    output = invoke(['fzm', 'query', '--dirs', 'dir_a'],
                     environment.bookmarks_file)
     assert Path(output.strip()) == environment.dir_a
-    output = invoke(['zfm', 'query', 'file_'],
+    output = invoke(['fzm', 'query', 'file_'],
                     environment.bookmarks_file)
     assert Path(output.strip()) == environment.file_a
-    output = invoke(['zfm', 'query', '--files', 'dir_b/file_a'],
+    output = invoke(['fzm', 'query', '--files', 'dir_b/file_a'],
                     environment.bookmarks_file)
     assert Path(output.strip()) == environment.file_a
 
 
 def test_fix(environment):
-    invoke(['zfm', 'add', environment.dir_a], environment.bookmarks_file)
+    invoke(['fzm', 'add', environment.dir_a], environment.bookmarks_file)
     assert list_bookmarks(environment.bookmarks_file) == [
         Bookmark(environment.dir_a, BookmarkType.Dir)]
     # remove directory a, it should removed from bookmarks after fix
     environment.dir_a.rmdir()
-    invoke(['zfm', 'fix'], environment.bookmarks_file)
+    invoke(['fzm', 'fix'], environment.bookmarks_file)
     assert list_bookmarks(environment.bookmarks_file) == []
 
 
 def test_clear(environment):
-    invoke(['zfm', 'add', environment.dir_a], environment.bookmarks_file)
+    invoke(['fzm', 'add', environment.dir_a], environment.bookmarks_file)
     assert list_bookmarks(environment.bookmarks_file) == [
         Bookmark(environment.dir_a, BookmarkType.Dir)]
-    invoke(['zfm', 'clear'], environment.bookmarks_file)
+    invoke(['fzm', 'clear'], environment.bookmarks_file)
     assert list_bookmarks(environment.bookmarks_file) == []
