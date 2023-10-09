@@ -35,7 +35,7 @@ function __fzm_filter_files()
     do
         lline=${line/#\~/$home}
         if [ -f $lline ]; then
-            echo $line
+            echo $lline
         fi
     done
 }
@@ -47,7 +47,7 @@ function __fzm_filter_dirs()
     do
         lline=${line/#\~/$home}
         if [ -d $lline ]; then
-            echo $line
+            echo $lline
         fi
     done
 }
