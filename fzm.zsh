@@ -1,3 +1,5 @@
+set -o magicequalsubst
+
 # Define a regular expression for matching URLs
 __url_regex='^(http|https):\/\/[a-zA-Z0-9\-\.]+(\.[a-zA-Z]{2,})?(:[0-9]{1,5})?(\/.*)?$'
 
@@ -28,9 +30,11 @@ function __fzm_filter_urls()
 
 function __fzm_filter_files()
 {
+    home=~
     while read line
     do
-        if [ -f $line ]; then
+        lline=${line/#\~/$home}
+        if [ -f $lline ]; then
             echo $line
         fi
     done
@@ -38,9 +42,11 @@ function __fzm_filter_files()
 
 function __fzm_filter_dirs()
 {
+    home=~
     while read line
     do
-        if [ -d $line ]; then
+        lline=${line/#\~/$home}
+        if [ -d $lline ]; then
             echo $line
         fi
     done
@@ -48,12 +54,14 @@ function __fzm_filter_dirs()
 
 function __fzm_decorate()
 {
+    home=~
     while read line
     do
         if [ ! -z "$line" ];then
-            if [ -d "$line" ]; then
+            lline=${line/#\~/$home}
+            if [ -d "$lline" ]; then
                 echo "$line" "[d]"
-            elif [ -f "$line" ]; then
+            elif [ -f "l$line" ]; then
                 echo "$line" "[f]"
             elif  [[ $line =~ $__url_regex ]]; then
                 echo "$line" "[u]"
@@ -64,9 +72,11 @@ function __fzm_decorate()
 
 function __fzm_filter_non_existent()
 {
+    home=~
     while read line
     do
-        if [[ -d $line ]] || [[ -e $line ]]; then
+        lline=${line/#\~/$home}
+        if [[ -d $lline ]] || [[ -e $lline ]]; then
             echo $line
         fi
     done
@@ -202,6 +212,19 @@ function fzm()
                 cat "$bookmarks_file" | __fzm_select_with_query "$2"
             fi
             ;;
+        'open')
+            __fzm_check_regex "$1" '(--multi|--files|--dirs|--urls)' "${@:2}" || return 1
+            [[ $* == *--multi* ]] && local multi="-m"
+            if [[ $* == *--files* ]]; then
+                opener $(cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_bookmarks "${multi}")
+            elif [[ $* == *--dirs* ]]; then
+                opener $(cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_bookmarks "${multi}")
+            elif [[ $* == *--urls* ]]; then
+                opener $(cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_bookmarks "${multi}")
+            else
+                opener $(cat "$bookmarks_file" | __fzm_select_bookmarks "${multi}")
+            fi
+            ;;
         'fix')
             ! [[  -z "${@:2}" ]] && echo "Invalid option '${@:2}' for '$1'" && return 1
             __fzm_cleanup "$bookmarks_file"
@@ -272,6 +295,7 @@ fi
 # f - jump to directory with query
 function f()
 {
+    home=~
     if [ -z "$@" ]; then
         local dir=$(fzm select --dirs)
     else
@@ -280,6 +304,7 @@ function f()
     if [[ -z "$dir" ]]; then
         return 0
     fi
+    dir=${dir/#\~/$home}
     cd "$dir"
 }
 
