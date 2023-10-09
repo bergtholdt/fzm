@@ -1,19 +1,24 @@
 set -o magicequalsubst
 
+# Todo:
+# # comment
+# any command 
+# short cut name or path hierarchy
+
 # Define a regular expression for matching URLs
 __url_regex='^(http|https):\/\/[a-zA-Z0-9\-\.]+(\.[a-zA-Z]{2,})?(:[0-9]{1,5})?(\/.*)?$'
 
 function __fzm_select_bookmarks()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
-    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS"
+    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} $FZF_DEFAULT_OPTS"
     __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
 }
 
 function __fzm_select_with_query()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
-    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS"
+    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} $FZF_DEFAULT_OPTS"
     __fzm_decorate | FZF_DEFAULT_OPTS="${opts}" fzf -q "$@" -1 -0 | awk '{ print $1 }'
 }
 
