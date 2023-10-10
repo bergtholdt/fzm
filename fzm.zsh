@@ -15,6 +15,20 @@ function __fzm_select_bookmarks()
     __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
 }
 
+function __fzm_select_directories()
+{
+    setopt localoptions pipefail no_aliases 2> /dev/null
+    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} --preview 'lsd --tree --depth 3 --color=always {}' $FZF_DEFAULT_OPTS"
+    __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
+}
+
+function __fzm_select_files()
+{
+    setopt localoptions pipefail no_aliases 2> /dev/null
+    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} --preview 'bat --theme=gruvbox-dark --color=always --tabs=2 --wrap=auto --style=full --decorations=always {}' $FZF_DEFAULT_OPTS"
+    __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
+}
+
 function __fzm_select_with_query()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
@@ -193,9 +207,9 @@ function fzm()
             __fzm_check_regex "$1" '(--multi|--files|--dirs|--urls)' "${@:2}" || return 1
             [[ $* == *--multi* ]] && local multi="-m"
             if [[ $* == *--files* ]]; then
-                cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_bookmarks "${multi}"
+                cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_files "${multi}"
             elif [[ $* == *--dirs* ]]; then
-                cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_bookmarks "${multi}"
+                cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_directories "${multi}"
             elif [[ $* == *--urls* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_bookmarks "${multi}"
             else
@@ -221,9 +235,9 @@ function fzm()
             __fzm_check_regex "$1" '(--multi|--files|--dirs|--urls)' "${@:2}" || return 1
             [[ $* == *--multi* ]] && local multi="-m"
             if [[ $* == *--files* ]]; then
-                opener $(cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_bookmarks "${multi}")
+                opener $(cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_files "${multi}")
             elif [[ $* == *--dirs* ]]; then
-                opener $(cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_bookmarks "${multi}")
+                opener $(cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_directories "${multi}")
             elif [[ $* == *--urls* ]]; then
                 opener $(cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_bookmarks "${multi}")
             else
