@@ -18,14 +18,14 @@ function __fzm_select_bookmarks()
 function __fzm_select_directories()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
-    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} --preview 'lsd --tree --depth 3 --color=always {}' $FZF_DEFAULT_OPTS"
+    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} --preview-window='right,50%,border-left' --preview 'lsd --tree --depth 3 --color=always {1}' $FZF_DEFAULT_OPTS"
     __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
 }
 
 function __fzm_select_files()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
-    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} --preview 'bat --theme=gruvbox-dark --color=always --tabs=2 --wrap=auto --style=full --decorations=always {}' $FZF_DEFAULT_OPTS"
+    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} --preview 'bat --theme=gruvbox-dark --color=always --tabs=2 --wrap=auto --style=full --decorations=always {1}' $FZF_DEFAULT_OPTS"
     __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
 }
 
