@@ -1,7 +1,7 @@
 set -o magicequalsubst
 
 # Todo:
-# # comment
+# comment
 # any command 
 # short cut name or path hierarchy
 
@@ -9,14 +9,8 @@ set -o magicequalsubst
 __url_regex='^(http|https):\/\/[a-zA-Z0-9\-\.]+(\.[a-zA-Z]{2,})?(:[0-9]{1,5})?(\/.*)?$'
 __cmd_regex='^!.*$'
 
-function __fzm_select_bookmarks()
-{
-    setopt localoptions pipefail no_aliases 2> /dev/null
-    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} $FZF_DEFAULT_OPTS"
-    __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
-}
 
-function __fzm_select_commands()
+function __fzm_select_multi()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
     local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} $FZF_DEFAULT_OPTS"
@@ -98,16 +92,16 @@ function __fzm_decorate()
         if [ ! -z "$line" ];then
             lline=${line/#\~/$home}
             if [ -d "$lline" ]; then
-                echo "$line" "[d]"
+                echo "$line" "	" "[d]"
             elif [ -f "$lline" ]; then
-                echo "$line" "[f]"
+                echo "$line" "	" "[f]"
             elif  [[ $line =~ $__url_regex ]]; then
-                echo "$line" "[u]"
+                echo "$line" "	" "[u]"
             elif  [[ $line =~ $__cmd_regex ]]; then
-                echo "${line[2,-1]}" "[c]"
+                echo "${line[2,-1]}" "	" "[c]"
             fi
         fi
-    done | column -t
+    done | column -t -s "$(printf '\t')"
 }
 
 function __fzm_filter_non_existent()
@@ -238,11 +232,11 @@ function fzm()
             elif [[ $* == *--dirs* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_directories "${multi}"
             elif [[ $* == *--urls* ]]; then
-                cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_bookmarks "${multi}"
+                cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_multi "${multi}"
             elif [[ $* == *--cmd* ]]; then
-                cat "$bookmarks_file" | __fzm_filter_commands | __fzm_select_commands "${multi}"
+                cat "$bookmarks_file" | __fzm_filter_commands | __fzm_select_multi "${multi}"
             else
-                cat "$bookmarks_file" | __fzm_select_bookmarks "${multi}"
+                cat "$bookmarks_file" | __fzm_select_multi "${multi}"
             fi
             ;;
         'add')
@@ -270,13 +264,13 @@ function fzm()
             elif [[ $* == *--dirs* ]]; then
                 opener $(cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_directories "${multi}")
             elif [[ $* == *--urls* ]]; then
-                opener $(cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_bookmarks "${multi}")
+                opener $(cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_multi "${multi}")
             else
-                opener $(cat "$bookmarks_file" | __fzm_select_bookmarks "${multi}")
+                opener $(cat "$bookmarks_file" | __fzm_select_multi "${multi}")
             fi
             ;;
         'exec')
-            cmd=$(cat "$bookmarks_file" | __fzm_filter_commands | __fzm_select_commands) && eval "$cmd"
+            cmd=$(cat "$bookmarks_file" | __fzm_filter_commands | __fzm_select_multi) && eval "$cmd"
             ;;
         'fix')
             ! [[  -z "${@:2}" ]] && echo "Invalid option '${@:2}' for '$1'" && return 1
@@ -302,7 +296,7 @@ function fzm()
 }
 
 #######################################################################
-# CTRL-B - insert bookmark
+# CTRL-O - insert bookmark
 function __fzm_append_to_prompt()
 {
     if [[ -z "$1" ]]; then
@@ -320,12 +314,12 @@ function fzm-insert-bookmark()
 }
 zle     -N    fzm-insert-bookmark
 if [[ -z $FZM_NO_BINDINGS ]]; then
-    bindkey '^[b' fzm-insert-bookmark
-    bindkey -M vicmd '^[b' fzm-insert-bookmark
+    bindkey '^o' fzm-insert-bookmark
+    bindkey -M vicmd '^o' fzm-insert-bookmark
 fi
 
 #######################################################################
-# CTRL-P - cd into bookmarked directory
+# CTRL-B - cd into bookmarked directory
 function fzm-cd-to-bookmark() {
 local dir=$(fzm select --dirs)
 if [[ -z "$dir" ]]; then
@@ -340,8 +334,8 @@ return $ret
 }
 zle     -N    fzm-cd-to-bookmark
 if [[ -z $FZM_NO_BINDINGS ]]; then
-    bindkey '^[.' fzm-cd-to-bookmark
-    bindkey -M vicmd '^[.' fzm-cd-to-bookmark
+    bindkey '^b' fzm-cd-to-bookmark
+    bindkey -M vicmd '^b' fzm-cd-to-bookmark
 fi
 
 #######################################################################
