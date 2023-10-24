@@ -7,12 +7,20 @@ set -o magicequalsubst
 
 # Define a regular expression for matching URLs
 __url_regex='^(http|https):\/\/[a-zA-Z0-9\-\.]+(\.[a-zA-Z]{2,})?(:[0-9]{1,5})?(\/.*)?$'
+__cmd_regex='^!.*$'
 
 function __fzm_select_bookmarks()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
     local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} $FZF_DEFAULT_OPTS"
     __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{ print $1 }'
+}
+
+function __fzm_select_commands()
+{
+    setopt localoptions pipefail no_aliases 2> /dev/null
+    local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} $FZF_DEFAULT_OPTS"
+    __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{$(NF--)=""; print}'
 }
 
 function __fzm_select_directories()
@@ -43,6 +51,17 @@ function __fzm_filter_urls()
     do
         if  [[ $line =~ $__url_regex ]]; then
             echo $line
+        fi
+    done
+}
+
+function __fzm_filter_commands()
+{
+
+    while read line
+    do
+        if  [[ $line =~ $__cmd_regex ]]; then
+            echo ${line}
         fi
     done
 }
@@ -80,10 +99,12 @@ function __fzm_decorate()
             lline=${line/#\~/$home}
             if [ -d "$lline" ]; then
                 echo "$line" "[d]"
-            elif [ -f "l$line" ]; then
+            elif [ -f "$lline" ]; then
                 echo "$line" "[f]"
             elif  [[ $line =~ $__url_regex ]]; then
                 echo "$line" "[u]"
+            elif  [[ $line =~ $__cmd_regex ]]; then
+                echo "${line[2,-1]}" "[c]"
             fi
         fi
     done | column -t
@@ -94,9 +115,9 @@ function __fzm_filter_non_existent()
     home=~
     while read line
     do
-        lline=${line/#\~/$home}
-        if [[ -d $lline ]] || [[ -e $lline ]]; then
-            echo $line
+        lline=$(echo $line | __fzm_decorate)
+        if [ -n "${lline}" ];then
+            echo "$line"
         fi
     done
 }
@@ -144,31 +165,35 @@ usage="$(basename "$0") [-h] <command> [opts] -- fuzzy marks
 
 commands:
 
-list [--files] [--dirs] [--urls]               list bookmarks
-add <path> [paths...]                          bookmark items
-select [--files] [--dirs] [--urls] [--multi]   select bookmark(s) and print selection to sdtout
-query <pattern>                                Query bookmark matching <pattern> and print match to stdout. Selection menu will open if match is ambiguous.
-edit                                           edit bookmarks file
-fix                                            remove bookmarked that no longer exist
-clear                                          clear all bookmarks
+list [--files] [--dirs] [--urls] [--cmd]   list bookmarks
+add <path> [paths...]                      bookmark items
+select [--files] [--dirs] 
+       [--urls] [--cmd] [--multi]          select bookmark(s) and print selection to sdtout
+query <pattern>                            Query bookmark matching <pattern> and print match to stdout. Selection menu will open if match is ambiguous.
+edit                                       edit bookmarks file
+open                                       select bookmark(s) and open
+exec                                       select command(s) and execute
+fix                                        remove bookmarked that no longer exist (do not use if you use the same bookmarks on other machines)
+clear                                      clear all bookmarks
 
 options:
 
--h,--help                                      show help
---files                                        restrict to files only
---dirs                                         restrict to dirs only
---urls                                         restrict to urls only
---multi                                        allow multiple selection of items
+-h,--help                                  show help
+--files                                    restrict to files only
+--dirs                                     restrict to dirs only
+--urls                                     restrict to urls only
+--cmd                                      restrict to commands only
+--multi                                    allow multiple selection of items
 
 keybindings:
 
-Ctrl+P                                         Select a bookmarked directory and jump to it
-Ctrl+O                                         Select one or multiple bookmarks and insert them into the current command line
+Ctrl+P                                     Select a bookmarked directory and jump to it
+Ctrl+O                                     Select one or multiple bookmarks and insert them into the current command line
 
 ENV configuration:
 
-FZM_NO_BINDINGS                                Disabled creation of bindings
-FZM_BOOKMARKS_FILE                             Bookmarks file. Defaults to '~/.fzm.txt'
+FZM_NO_BINDINGS                            Disabled creation of bindings
+FZM_BOOKMARKS_FILE                         Bookmarks file. Defaults to '~/.fzm.txt'
 "
 
 function set_bookmarks_file()
@@ -192,19 +217,21 @@ function fzm()
     bookmarks_file=$(set_bookmarks_file)
     case "$1" in
         'list')
-            __fzm_check_regex "$1" '(--files|--dirs|--urls)' "${@:2}" || return 1
+            __fzm_check_regex "$1" '(--files|--dirs|--urls|--cmd)' "${@:2}" || return 1
             if [[ $* == *--files* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_files | __fzm_decorate
             elif [[ $* == *--dirs* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_decorate
             elif [[ $* == *--urls* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_urls | __fzm_decorate
+            elif [[ $* == *--cmd* ]]; then
+                cat "$bookmarks_file" | __fzm_filter_commands | __fzm_decorate
             else
                 cat "$bookmarks_file" | __fzm_decorate
             fi
             ;;
         'select')
-            __fzm_check_regex "$1" '(--multi|--files|--dirs|--urls)' "${@:2}" || return 1
+            __fzm_check_regex "$1" '(--multi|--files|--dirs|--urls|--cmd)' "${@:2}" || return 1
             [[ $* == *--multi* ]] && local multi="-m"
             if [[ $* == *--files* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_files | __fzm_select_files "${multi}"
@@ -212,6 +239,8 @@ function fzm()
                 cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_directories "${multi}"
             elif [[ $* == *--urls* ]]; then
                 cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_bookmarks "${multi}"
+            elif [[ $* == *--cmd* ]]; then
+                cat "$bookmarks_file" | __fzm_filter_commands | __fzm_select_commands "${multi}"
             else
                 cat "$bookmarks_file" | __fzm_select_bookmarks "${multi}"
             fi
@@ -227,6 +256,8 @@ function fzm()
                 cat "$bookmarks_file" | __fzm_filter_dirs | __fzm_select_with_query "${@:3}"
             elif [[ "$2" == "--urls" ]]; then
                 cat "$bookmarks_file" | __fzm_filter_urls | __fzm_select_with_query "${@:3}"
+            elif [[ "$2" == "--cmd" ]]; then
+                cat "$bookmarks_file" | __fzm_filter_commands | __fzm_select_with_query "${@:3}"
             else
                 cat "$bookmarks_file" | __fzm_select_with_query "$2"
             fi
@@ -243,6 +274,9 @@ function fzm()
             else
                 opener $(cat "$bookmarks_file" | __fzm_select_bookmarks "${multi}")
             fi
+            ;;
+        'exec')
+            cmd=$(cat "$bookmarks_file" | __fzm_filter_commands | __fzm_select_commands) && eval "$cmd"
             ;;
         'fix')
             ! [[  -z "${@:2}" ]] && echo "Invalid option '${@:2}' for '$1'" && return 1
@@ -286,8 +320,8 @@ function fzm-insert-bookmark()
 }
 zle     -N    fzm-insert-bookmark
 if [[ -z $FZM_NO_BINDINGS ]]; then
-    bindkey '^[m' fzm-insert-bookmark
-    bindkey -M vicmd '^[m' fzm-insert-bookmark
+    bindkey '^[b' fzm-insert-bookmark
+    bindkey -M vicmd '^[b' fzm-insert-bookmark
 fi
 
 #######################################################################
