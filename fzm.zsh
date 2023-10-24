@@ -14,7 +14,7 @@ function __fzm_select_multi()
 {
     setopt localoptions pipefail no_aliases 2> /dev/null
     local opts="--reverse --exact --no-sort --cycle --height ${FZF_TMUX_HEIGHT:-80%} $FZF_DEFAULT_OPTS"
-    __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{$(NF--)=""; print}'
+    __fzm_decorate | FZF_DEFAULT_OPTS="$@ ${opts}" fzf | awk '{$(NF--)=""; print}' | awk '{$(NF--)=""; print}'
 }
 
 function __fzm_select_directories()
@@ -89,16 +89,21 @@ function __fzm_decorate()
     home=~
     while read line
     do
-        if [ ! -z "$line" ];then
-            lline=${line/#\~/$home}
+        arg="${line/( ##\#?##)}"
+        comment="${line/(?##\# ##)}"
+        if [[ $comment == $arg ]]; then
+            comment=" "
+        fi
+        if [ ! -z "$arg" ];then
+            lline=${arg/#\~/$home}
             if [ -d "$lline" ]; then
-                echo "$line" "	" "[d]"
+                echo "$arg" "	" "[d]" "	" "$comment"
             elif [ -f "$lline" ]; then
-                echo "$line" "	" "[f]"
-            elif  [[ $line =~ $__url_regex ]]; then
-                echo "$line" "	" "[u]"
-            elif  [[ $line =~ $__cmd_regex ]]; then
-                echo "${line[2,-1]}" "	" "[c]"
+                echo "$arg" "	" "[f]" "	" "$comment"
+            elif  [[ $arg =~ $__url_regex ]]; then
+                echo "$arg" "	" "[u]" "	" "$comment"
+            elif  [[ $arg =~ $__cmd_regex ]]; then
+                echo "${arg[2,-1]}" "	" "[c]" "	" "$comment"
             fi
         fi
     done | column -t -s "$(printf '\t')"
