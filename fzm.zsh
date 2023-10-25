@@ -40,7 +40,6 @@ function __fzm_select_with_query()
 
 function __fzm_filter_urls()
 {
-
     while read line
     do
         if  [[ $line =~ $__url_regex ]]; then
@@ -51,7 +50,6 @@ function __fzm_filter_urls()
 
 function __fzm_filter_commands()
 {
-
     while read line
     do
         if  [[ $line =~ $__cmd_regex ]]; then
@@ -62,10 +60,10 @@ function __fzm_filter_commands()
 
 function __fzm_filter_files()
 {
-    home=~
+    local home=~
     while read line
     do
-        lline=${line/#\~/$home}
+        local lline=${line/#\~/$home}
         if [ -f $lline ]; then
             echo $lline
         fi
@@ -74,10 +72,10 @@ function __fzm_filter_files()
 
 function __fzm_filter_dirs()
 {
-    home=~
+    local home=~
     while read line
     do
-        lline=${line/#\~/$home}
+        local lline=${line/#\~/$home}
         if [ -d $lline ]; then
             echo $lline
         fi
@@ -86,11 +84,11 @@ function __fzm_filter_dirs()
 
 function __fzm_decorate()
 {
-    home=~
+    local home=~
     while read line
     do
-        arg="${line/( ##\#?##)}"
-        comment="${line/(?##\# ##)}"
+        local arg="${line/( ##\#?##)}"
+        local comment="${line/(?##\# ##)}"
         if [[ $comment == $arg ]]; then
             comment=" "
         fi
@@ -111,10 +109,10 @@ function __fzm_decorate()
 
 function __fzm_filter_non_existent()
 {
-    home=~
+    local home=~
     while read line
     do
-        lline=$(echo $line | __fzm_decorate)
+        local lline=$(echo $line | __fzm_decorate)
         if [ -n "${lline}" ];then
             echo "$line"
         fi
